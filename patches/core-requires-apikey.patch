@@ -1,0 +1,90 @@
+diff --git a/src/main/kotlin/moe/rukamori/archivetune/innertube/InnerTube.kt b/src/main/kotlin/moe/rukamori/archivetune/innertube/InnerTube.kt
+index eb5adff..1455772 100644
+--- a/src/main/kotlin/moe/rukamori/archivetune/innertube/InnerTube.kt
++++ b/src/main/kotlin/moe/rukamori/archivetune/innertube/InnerTube.kt
+@@ -51,6 +51,7 @@ class InnerTube {
+         const val PLAYBACK_TELEMETRY_VER = "2"
+         const val PLAYBACK_TELEMETRY_ACCEPT_LANGUAGE = "en-US,en;q=0.9"
+         const val PLAYBACK_TELEMETRY_CACHE_CONTROL = "no-cache"
++        const val INNERTUBE_API_KEY = "AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX3"
+     }
+ 
+     var locale =
+@@ -352,7 +353,11 @@ class InnerTube {
+         includeDataSyncId: Boolean,
+     ) = httpClient.post(client.requestApiUrl("player")) {
+         ytClient(client = client, setLogin = setLogin, authState = authState)
+-        setBody(
++        // Mobile innertube clients reject requests without the API key.
++        if (client.requiresApiKey) {
++            parameter("key", INNERTUBE_API_KEY)
++        }
++        val playerBody =
+             PlayerBody(
+                 context =
+                     client
+@@ -388,8 +393,8 @@ class InnerTube {
+                     poToken?.let {
+                         PlayerBody.ServiceIntegrityDimensions(poToken = it)
+                     },
+-            ),
+-        )
++            )
++        setBody(playerBody)
+     }
+ 
+     private fun shouldRetryPlayerRequestWithoutDataSyncId(
+@@ -522,7 +527,7 @@ class InnerTube {
+         poToken: String? = null,
+     ) = withRetry {
+         httpClient.post("https://music.youtube.com/youtubei/v1/get_transcript") {
+-            parameter("key", "AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX3")
++            parameter("key", INNERTUBE_API_KEY)
+             poToken?.let {
+                 parameter("pot", it)
+                 parameter("potc", "1")
+diff --git a/src/main/kotlin/moe/rukamori/archivetune/innertube/YouTube.kt b/src/main/kotlin/moe/rukamori/archivetune/innertube/YouTube.kt
+index 34f2ab8..1a3537f 100644
+--- a/src/main/kotlin/moe/rukamori/archivetune/innertube/YouTube.kt
++++ b/src/main/kotlin/moe/rukamori/archivetune/innertube/YouTube.kt
+@@ -2520,7 +2520,7 @@ object YouTube {
+                         if (isDisabled || !hasChannel) return@mapNotNull null
+ 
+                         renderer["serviceEndpoint"]
+-                            ?.findStringValue(setOf("datasyncId", "dataSyncId"))
++                            ?.findDelegationValue()
+                             ?.normalizeAccountChannelDataSyncId()
+                             ?.let { dataSyncId ->
+                                 dataSyncId to (renderer.booleanValue("isSelected") ?: false)
+@@ -2564,7 +2564,7 @@ object YouTube {
+             ?.jsonObjectOrNull()
+             ?.get("mainAppWebResponseContext")
+             ?.jsonObjectOrNull()
+-            ?.get("dataSyncId")
++            ?.let { context -> context["dataSyncId"] ?: context["datasyncId"] }
+             ?.jsonPrimitiveOrNull()
+             ?.contentOrNull
+             ?.normalizeAccountChannelDataSyncId()
+diff --git a/src/main/kotlin/moe/rukamori/archivetune/innertube/models/YouTubeClient.kt b/src/main/kotlin/moe/rukamori/archivetune/innertube/models/YouTubeClient.kt
+index 3403801..8e15412 100644
+--- a/src/main/kotlin/moe/rukamori/archivetune/innertube/models/YouTubeClient.kt
++++ b/src/main/kotlin/moe/rukamori/archivetune/innertube/models/YouTubeClient.kt
+@@ -75,6 +75,18 @@ data class YouTubeClient(
+ 
+     fun requestApiUrl(endpoint: String): String = "${requestOrigin()}/youtubei/v1/$endpoint"
+ 
++    /**
++     * Mobile innertube clients (android/iOS) reject player requests that lack
++     * the public API key; the web clients tolerate its absence.
++     */
++    val requiresApiKey: Boolean
++        get() {
++            val name = clientName.uppercase(Locale.US)
++            return name.startsWith("ANDROID") ||
++                name.startsWith("IOS") ||
++                name in setOf("MOBILE", "IPADOS", "VISIONOS")
++        }
++
+     companion object {
+         const val USER_AGENT_WEB = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+         const val USER_AGENT_WEB_REMIX = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:140.0) Gecko/20100101 Firefox/140.0"

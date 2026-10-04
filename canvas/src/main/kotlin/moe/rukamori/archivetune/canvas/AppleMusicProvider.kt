@@ -38,9 +38,16 @@ object AppleMusicProvider {
     // ── Logging ──────────────────────────────────────────────────────────────────────
 
     private object Log {
-        fun d(msg: String) = println("AppleMusicCanvas: D: $msg")
+        @Volatile
+        var enabled: Boolean = true
 
-        fun w(msg: String) = println("AppleMusicCanvas: W: $msg")
+        fun d(msg: String) {
+            if (enabled) println("AppleMusicCanvas: D: $msg")
+        }
+
+        fun w(msg: String) {
+            if (enabled) println("AppleMusicCanvas: W: $msg")
+        }
 
         fun e(
             t: Throwable,
@@ -50,6 +57,16 @@ object AppleMusicProvider {
             t.printStackTrace()
         }
     }
+
+    /**
+     * Whether Apple Music canvas lookups print their debug chatter to stdout.
+     * The CLI turns this off so `-f json` output stays pipeable.
+     */
+    var isDebugLoggingEnabled: Boolean
+        get() = Log.enabled
+        set(value) {
+            Log.enabled = value
+        }
 
     // ── Constants ────────────────────────────────────────────────────────────────────
 

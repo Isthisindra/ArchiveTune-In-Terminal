@@ -39,13 +39,16 @@ dependencyResolutionManagement {
     }
 }
 
-// F-Droid doesn't support foojay-resolver plugin
-// plugins {
-//     id("org.gradle.toolchains.foojay-resolver-convention") version("1.0.0")
+// F-Droid doesn't support foojay-resolver plugin, so it stays opt-in. The CLI
+// enables it via -Pcli so a JDK 21 toolchain can be auto-provisioned on machines
+// that only have an older JDK on PATH.
+// if (providers.gradleProperty("cli").isPresent) {
+//     id("org.gradle.toolchains.foojay-resolver-convention") version("1.0.0") in settings
 // }
 
 rootProject.name = "ArchiveTune"
-include(":app")
+
+include(":cli")
 include(":core")
 include(":lyrics:kugou")
 include(":lyrics:lrclib")
@@ -58,7 +61,41 @@ include(":lastfm")
 include(":canvas")
 include(":shazamkit")
 include(":spotifycore")
-include(":morideobfuscator")
+
+// The Android-only modules are skipped when no Android SDK is available, so the
+// CLI (and every plain-JVM module) still configures on a machine that only has a
+// JDK installed. Override with -PwithAndroid=<path-to-sdk> or -PwithAndroid=true
+// when an SDK is present but not auto-detected.
+val withAndroid: String? = providers.gradleProperty("withAndroid").orNull
+
+val androidSdkAvailable: Boolean =
+    when {
+        withAndroid != null -> withAndroid.equals("true", ignoreCase = true) || File(withAndroid).isDirectory
+        else ->
+            System.getenv("ANDROID_HOME") != null ||
+                System.getenv("ANDROID_SDK_ROOT") != null ||
+                File("local.properties")
+                    .takeIf { it.isFile }
+                    ?.let { props ->
+                        java.util.Properties().apply { props.inputStream().use(::load) }
+                            .getProperty("sdk.dir")
+                            ?.let { File(it).isDirectory } == true
+                    } == true
+    }
+
+if (androidSdkAvailable) {
+    include(":app")
+    include(":morideobfuscator")
+}
+
+gradle.rootProject {
+    if (!androidSdkAvailable) {
+        logger.lifecycle(
+            "[ArchiveTune] No Android SDK detected - skipping :app and :morideobfuscator. " +
+                "The :cli module and all plain-JVM modules still build.",
+        )
+    }
+}
 
 // Use a local copy of NewPipe Extractor by uncommenting the lines below.
 // We assume, that ArchiveTune and NewPipe Extractor have the same parent directory.

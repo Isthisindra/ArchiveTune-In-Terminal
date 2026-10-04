@@ -51,6 +51,13 @@ quickjsKt = "1.0.14"
 protobuf = "4.36.1"
 webkit = "1.17.0"
 haze = "2.0.0-rc01"
+clikt = "5.1.0"
+mordant = "3.1.0"
+vlcj = "4.11.0"
+icu4j = "78.3"
+jline = "4.4.6"
+slf4j = "2.0.17"
+jna = "5.17.0"
 
 
 [libraries]
@@ -60,6 +67,7 @@ annotation = { module = "androidx.annotation:annotation", version.ref = "annotat
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
 coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 coroutines-guava = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-guava", version.ref = "coroutines" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "coroutines" }
 concurrent-futures = { module = "androidx.concurrent:concurrent-futures-ktx", version.ref = "concurrentFutures" }
 
 gradle = { module = "com.android.tools.build:gradle", version.ref = "agp" }
@@ -163,6 +171,21 @@ leakcanary-android = { module = "com.squareup.leakcanary:leakcanary-android", ve
 quickjs-kt = { module = "io.github.dokar3:quickjs-kt", version.ref = "quickjsKt" }
 haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
 haze-blur = { module = "dev.chrisbanes.haze:haze-blur", version.ref = "haze" }
+
+# --- CLI (plain-JVM, no Android) ---
+clikt = { module = "com.github.ajalt.clikt:clikt", version.ref = "clikt" }
+mordant = { module = "com.github.ajalt.mordant:mordant", version.ref = "mordant" }
+vlcj = { module = "uk.co.caprica:vlcj", version.ref = "vlcj" }
+icu4j = { module = "com.ibm.icu:icu4j", version.ref = "icu4j" }
+# Bundle artifact; the `jdk11` classifier is applied in cli/build.gradle.kts.
+jline = { module = "org.jline:jline", version.ref = "jline" }
+# vlcj and ktor log through slf4j. Without a provider on the classpath they
+# print a "no providers were found" banner on stderr for every single command.
+slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
+# Reads the raw UTF-16 Windows command line, which is the only way to recover a
+# non-Latin argument. See cli/WindowsArgs.kt.
+jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
+jna-platform = { module = "net.java.dev.jna:jna-platform", version.ref = "jna" }
 
 
 
